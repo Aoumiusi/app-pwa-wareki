@@ -276,7 +276,7 @@ function warekiToSeireki(p) {
   const era = ERAS.find(e => e.name === p.eraName);
   if (!era) return [];
   const year = era.offset + p.eraYear;
-  if (year < era.sy || year > eraEndYear(ERAS.indexOf(era))) return [];
+  if (year < era.sy) return [];
   return [{ year, month: p.month, day: p.day }];
 }
 
