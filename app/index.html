@@ -176,7 +176,7 @@
 <h1>和暦・西暦 変換</h1>
 
 <div class="input-row">
-  <input type="text" id="userInput" placeholder="令和6年　または　2024年"
+  <input type="text" id="userInput" placeholder="令和6年 / R6 / 2024年"
          autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
   <button id="micBtn" title="音声入力" aria-label="音声入力">🎤</button>
 </div>
@@ -186,7 +186,7 @@
 <div class="result-area" id="resultArea"></div>
 
 <div class="hint" id="hint">
-  例: 令和6年12月3日 → 2024年12月3日<br>
+  例: 令和6年12月3日 / R6.12.3 / R.6/12/3 → 2024年12月3日<br>
   例: 2024/12/3 → 令和6年12月3日<br>
   音声で「令和６年１２月３日は」と言うと自動変換
 </div>
@@ -208,11 +208,15 @@ function eraEndYear(i) {
 }
 
 // ===== 入力解析 =====
+const ERA_ABBR = { R: '令和', H: '平成', S: '昭和', T: '大正', M: '明治' };
+
 function parseInput(raw) {
-  const s = raw.trim().replace(/　/g, '').replace(/\s+/g, '');
+  const s = raw.trim()
+    .replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+    .replace(/　/g, '').replace(/\s+/g, '');
   if (!s) return null;
 
-  // 和暦: (元号)(元|数字)(年)?(月)?(日)?
+  // 和暦 (漢字): 令和6年10月10日
   let m = s.match(/^(令和|平成|昭和|大正|明治)(元|\d+)年?(?:(\d+)月(?:(\d+)日?)?)?/);
   if (m) {
     return {
@@ -221,6 +225,30 @@ function parseInput(raw) {
       eraYear: m[2] === '元' ? 1 : parseInt(m[2]),
       month: m[3] ? parseInt(m[3]) : null,
       day:   m[4] ? parseInt(m[4]) : null,
+    };
+  }
+
+  // 和暦 (漢字 + ./区切り): 令和6.10.10, 令和6/10/10
+  m = s.match(/^(令和|平成|昭和|大正|明治)(元|\d+)[./](\d{1,2})(?:[./](\d{1,2}))?/);
+  if (m) {
+    return {
+      type: 'wareki',
+      eraName: m[1],
+      eraYear: m[2] === '元' ? 1 : parseInt(m[2]),
+      month: parseInt(m[3]),
+      day:   m[4] ? parseInt(m[4]) : null,
+    };
+  }
+
+  // 略称和暦: R6, R.6, R6.10.10, R.6/10/10, H30年1月1日 等
+  m = s.match(/^([RrHhSsTtMm])\.?(\d+|元)(?:年(?:(\d{1,2})月(?:(\d{1,2})日?)?)?|[./](\d{1,2})(?:[./](\d{1,2}))?)?/);
+  if (m) {
+    return {
+      type: 'wareki',
+      eraName: ERA_ABBR[m[1].toUpperCase()],
+      eraYear: m[2] === '元' ? 1 : parseInt(m[2]),
+      month: m[3] ? parseInt(m[3]) : (m[5] ? parseInt(m[5]) : null),
+      day:   m[4] ? parseInt(m[4]) : (m[6] ? parseInt(m[6]) : null),
     };
   }
 
